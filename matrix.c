@@ -60,3 +60,23 @@ void MatrixMultT(Matrix*mtD,Matrix*mtA,Matrix*mtB){
     for(j=0;j<mtB->H;j++)
       Elem(mtD,i,j) = VP( Row(mtA,i), Row(mtB,j), mtA->W);
 }
+
+void MatrixSimeqLr(Matrix*mtB,Matrix*mtR){
+  // B = B L^{-1}
+  double * B = Row(mtB,0);
+  int i,j;
+  for (i = mtB->W - 1; i >= 0; i--) {
+    for (j = i+1; j < mtB->W; j++) {
+      B[i] = B[i]-B[j]*Elem(mtR,i,j);
+    }
+    B[i] = B[i] / Elem(mtR,i,i);
+  }
+
+  /*
+  B[7] =  B[7] / Elem(mtR,7,7);
+  B[6] = (B[6]-B[7]*Elem(mtR,6,7)) / Elem(mtR,6,6);
+  B[5] = (B[5]-B[6]*Elem(mtR,5,6)-B[7]*Elem(mtR,5,7)) / Elem(mtR,5,5);
+///// 以下略
+*/
+
+}
