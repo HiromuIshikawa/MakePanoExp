@@ -5,9 +5,8 @@
   #include"image.h"
   #define INFINITY (1/0.)
   Matrix* lsq(int n, double xy [][2], double uv [][2]);
-  void MatrixFree(Matrix*mt);
-
-
+int TKfilter(int fea[][2], char *imName);
+void MatrixFree(Matrix*mt);
   int ransacMethod(int N, int ansAry[][4],int m[][2], int x1[][2],int x2[][2]) {
     int i,j,roop,snm=0,fnm,rndAry[N];
     Matrix *ans;
@@ -15,7 +14,7 @@
 
     for (i = 0; i < N; i++) rndAry[i] = i;
 
-    for (roop = 0; roop <= 1000; roop++) {
+    for (roop = 0; roop <= 10000; roop++) {
       fnm = 0;
       for(i=0;i < 4;i++){
         int t;
@@ -52,7 +51,8 @@
         // dx, dy は (x,y) を変換した座標と (u,v) の差．
         dx = xu - u;
         dy = yv - v;
-        if(dx*dx+dy*dy < 5){
+        if(dx*dx+dy*dy < 5
+        ){
   	w[fnm][0] = x;
   	w[fnm][1] = y;
   	w[fnm][2] = u;
@@ -153,33 +153,32 @@
   }
 
 
-  Matrix* makeTranceMT(Image *im, Image* im2){
+  Matrix* makeTranceMT(Image *im, Image* im2,char *imName, char *imName2){
     Matrix *mt, *ans;
-    int i,j,nm,snm;
+    int i,nm,snm;
     int match[999][2],ansAry[100][4];
-    int x1[][2]={
-  #include"0.fea"
-    }, N1=30;
-    int x2[][2]={
-  #include"1.fea"
-    }, N2=30;
+    int x1[30][2], N1=30, x2[30][2], N2=30;
+
+    TKfilter(x1, imName);
+    TKfilter(x2, imName2);
 
     mt=MatrixAlloc(N1,N2);
     calcSSDtable(mt,im,x1,N1,im2,x2,N2);
 
-    nm=matchMethod2(match,mt,im,x1,N1,im2,x2,N2); // 特徴点の対応付け
+  //  nm = greedyMethod(match,mt,im,x1,N1,im2,x2,N2);
+    nm = matchMethod2(match,mt,im,x1,N1,im2,x2,N2);
     /* for(i = 0; i < nm; i++)
       printf("%d:(%d,%d,%d,%d)\n",i,x1[match[i][0]][0],x1[match[i][0]][1],
       x2[match[i][1]][0],x2[match[i][1]][1]);*/
 
     snm = ransacMethod(N1, ansAry, match, x1, x2);
     double xy[snm][2], uv[snm][2];
-    for(j = 0; j < snm; j++) {
-      xy[j][0] = ansAry[j][0];
-      xy[j][1] = ansAry[j][1];
-      uv[j][0] = ansAry[j][2];
-      uv[j][1] = ansAry[j][3];
-      printf("(%f %f %f %f)\n", xy[j][0],xy[j][1],uv[j][0],uv[j][1]);
+    for(i = 0; i < snm; i++) {
+      xy[i][0] = ansAry[i][0];
+      xy[i][1] = ansAry[i][1];
+      uv[i][0] = ansAry[i][2];
+      uv[i][1] = ansAry[i][3];
+      printf("(%f %f %f %f)\n", xy[i][0],xy[i][1],uv[i][0],uv[i][1]);
     }
     ans = MatrixAlloc(1,8);
     printf("-----------------%d\n",snm);
