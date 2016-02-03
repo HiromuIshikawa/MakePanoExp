@@ -5,7 +5,7 @@
 
 #define __rdtsc() ({ long long a,d; asm volatile ("rdtsc":"=a"(a),"=d"(d)); d<<32|a; })
 #define DElem(_a,_b,_c)  (_a)->data[(_a)->W*(_c)+(_b)]
-void ImageFeature(Matrix*im2,Image*im);
+//void ImageFeature(Matrix*im2,Image*im);
 
 void ImageDrawBox(Image*im,int x,int y){
   int u,v,W=7;
@@ -27,23 +27,39 @@ void ImageMatrixWrite(Image*im,Matrix*mt,double s){
   }
 }
 
-/*void ImageFeature(Matrix*im2,Image*im){
+void ImageFeature(Matrix*im2,Image*im){
   int x,y,u,v,W=7,ix,iy;
-  for(y=W+1;y<im->H-W-1;y++) for(x=W+1;x<im->W-W-1;x++){
-      double ixx,ixy,iyy,b,c;
-    ixx=iyy=ixy=0;
-    for(v=-W;v<=W;v++) for(u=-W;u<=W;u++){
-      ix=IElem(im, x+u+1, y+v, 1) - IElem(im, x+u-1, y+v, 1);
-      iy=IElem(im, x+u, y+v+1, 1) - IElem(im, x+u, y+v-1, 1);
-      ixx+=ix*ix; // ixx だけでなく ixy,iyy も計算する．
-      iyy+=iy*iy;
-      ixy+=ix*iy;
+  double ixx,ixy,iyy,b,c;
+  Matrix*tmp_xx, *tmp_yy, *tmp_xy;
+  tmp_xx=MatrixAlloc(im->H,im->W);
+  tmp_yy=MatrixAlloc(im->H,im->W);
+  tmp_xy=MatrixAlloc(im->H,im->W);
+    for(y=W+1;y<im->H-W-1;y++) for(x=W+1;x<im->W-W-1;x++){
+      ixx=iyy=ixy=0;
+      for(v=-W;v<=W;v++){
+	ix=IElem(im, x+1, y+v,1) - IElem(im, x-1, y+v,1);
+	iy=IElem(im, x, y+v+1,1) - IElem(im, x, y+v-1,1);
+	ixx+=ix*ix;
+	iyy+=iy*iy;
+	ixy+=ix*iy;
+      }
+      DElem(tmp_xx,x,y)=ixx;
+      DElem(tmp_yy,x,y)=iyy;
+      DElem(tmp_xy,x,y)=ixy;
     }
-    b=ixx+iyy;
-    c=ixx*iyy-ixy*ixy;
-    DElem(im2,x,y)=(b - sqrt(b*b - 4*c)) / 2; // 実際には [ixx,ixy;ixy,iyy] の小さい方の固有値を入れる．
+  for(y=W+1;y<im->H-W-1;y++) for(x=W+1;x<im->W-W-1;x++){
+      ixx=iyy=ixy=0;
+      for(u=-W;u<=W;u++){
+	
+	ixx+=DElem(tmp_xx, x+u, y);
+	iyy+=DElem(tmp_yy, x+u, y);
+	ixy+=DElem(tmp_xy, x+u, y);
+        }
+      b=ixx+iyy;
+      c=ixx*iyy-ixy*ixy;
+      DElem(im2,x,y)=(b - sqrt(b*b - 4*c)) / 2;
   }
-  }*/
+}
 
 int MatrixLocalMax(int w[][2], Matrix*im2){
   int x,y,u,v,W=7,n=0,a;
@@ -75,5 +91,5 @@ printf("%f msec\n",(__rdtsc()-start)/3.4e+6);
 
   ImageMatrixWrite(im,im2,.001);
   for(i=0;i<kw;i++) ImageDrawBox(im,kk[i][0],kk[i][1]);
-  ImageWrite("out.ppm",im);
+  ImageWrite("out3.ppm",im);
 }
