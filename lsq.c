@@ -1,48 +1,9 @@
-// gcc -O pano0.c image.c && ./a.out && display out.ppm
+// cc lsq.c -lm -O ; ./a.out
 
-#include"image.h"
 #include<stdio.h>
 #include<math.h>
 #include<stdlib.h>
 #include<string.h>
-// Following functions must be defined in image.c:
-//   ImageRead, ImageAlloc, ImageClear.
-// In addition, check if your ImageRead can read a jpg file.
-
-#define ImageImageProjectionAlpha ImageImageProjectionAlphaNaive
-typedef struct {
-  double *data;
-  int W,H;
-} Matrix;
-
-#define Elem(_a,_b,_c)  (_a)->data[(_a)->W*(_b)+(_c)]
-#define Row(_a,_b)     ((_a)->data+(_a)->W*(_b))
-void ImageImageProjectionAlpha(Image*id,Image*is,double a[3][3],double alpha){
-  int x,y,u,v;
-  double r;
-  for(y=0;y<id->H;y++) for(x=0;x<id->W;x++){
-    r = 1 / (a[2][0]*x+a[2][1]*y+a[2][2]);
-    u = r * (a[0][0]*x+a[0][1]*y+a[0][2]);
-    v = r * (a[1][0]*x+a[1][1]*y+a[1][2]);
-    if( isInsideImage(is,u,v) ){
-      id->data[(y*id->W+x)*3+0] += is->data[(v*is->W+u)*3+0]*alpha,
-      id->data[(y*id->W+x)*3+1] += is->data[(v*is->W+u)*3+1]*alpha,
-      id->data[(y*id->W+x)*3+2] += is->data[(v*is->W+u)*3+2]*alpha;
-    }
-  }
-}
-
-void mult33(double a[3][3], double b[3][3], double c[3][3]){
-    int row,col;
-    for(row=0;row<3;row++) for(col=0;col<3;col++){
-	a[row][col]=b[row][0]*c[0][col]+
-	            b[row][1]*c[1][col]+
-	            b[row][2]*c[2][col];
-    }
-}
-
-
-// cc lsq.c -lm -O ; ./a.out
 //#include"mat33.h"
 
 // basic vector operations
@@ -63,13 +24,14 @@ void VSA(double*d,double*a,double s,int N){
   for(i=0;i<N;i++) d[i] += a[i] * s;
 }
 
+// matrix structure and functions
+typedef struct {
+  double *data;
+  int W,H;
+} Matrix;
 
-void MatrixFree(Matrix*mt)
-{
-    free(mt->data);
-    free(mt);
-}
-
+#define Elem(_a,_b,_c)  (_a)->data[(_a)->W*(_b)+(_c)]
+#define Row(_a,_b)     ((_a)->data+(_a)->W*(_b))
 
 Matrix*MatrixAlloc(int _H,int _W){
   Matrix*mt=(Matrix*)malloc(sizeof(Matrix));;
@@ -178,28 +140,29 @@ void MatrixSimeqLr(Matrix*mtB,Matrix*mtR){
   
 }
 
-Matrix* lsq(){
+
+main(){
   Matrix *cmA, *vt, *mtR, *tmp;
   int i;
   double z=1;
-    double xy[][2]={ // from 0.jpg
-        111,187,
-        619,215,
-        148,535,
-        627,486,
-        337,518 //5th point
-    },uv[][2]={ //from 1.jpg
-        230,203,
-        743,221,
-        267,544,
-        757,502,
-        454,530 //5th point
-    };
-  cmA=MatrixAlloc(10,10);
-  vt=MatrixAlloc(1,10);
+
+  double xy[][2]={ // from 0.jpg
+    148,537,
+    347,220,
+    263,367,
+    413,315,
+  },uv[][2]={ // from 1.jpg
+    371,230,
+    463,230,
+    383,379,
+    530,327,
+  };
+  double ans[3][3];
+  cmA=MatrixAlloc(8,8);
+  vt=MatrixAlloc(1,8);
 
   // create A (col-major)
-  for(i=0;i<5;i++){
+  for(i=0;i<4;i++){
     cmA->data[cmA->W*0+(i*2  )]=z*xy[i][0];
     cmA->data[cmA->W*1+(i*2  )]=z*xy[i][1];
     cmA->data[cmA->W*2+(i*2  )]=z*z;
@@ -221,58 +184,10 @@ Matrix* lsq(){
   }
 
   // solve Least-squares equation
-  mtR=MatrixAlloc(10,10);
+  mtR=MatrixAlloc(8,8);
   MatrixQRDecompColMajor(mtR,cmA);
   tmp=MatrixAlloc(1,8);
   MatrixMultT(tmp,vt,cmA);
   MatrixSimeqLr(tmp,mtR);
   MatrixPrint(tmp);
-//    MatrixFree(cmA);
-//    MatrixFree(vt);
-//    MatrixFree(mtR);
-    return tmp;
-}
-
-
-int main(){
-  Image *im,*im2;
-  Matrix *ans;
-  int i,j;
-  im2=ImageAlloc(1024,768);
-  ImageClear(im2);
-
-  {
-    double m0d[][3]={
-      1,0,-100,
-      0,1,-100,
-      0,0,1
-    };
-    im=ImageRead4jpg("0.jpg");
-    ImageImageProjectionAlpha(im2,im,m0d,.5);
-  }
-
-  {
-      double m10[3][3], m1d[3][3];
-    double m0d[][3]={
-      1,0,-100,
-      0,1,-100,
-      0,0,1
-    };
-    
-    ans=MatrixAlloc(1,8);
-    ans=lsq();
-      for(i=0;i<ans->H;i++){
-	for(j=0;j<ans->W;j++)
-	  m10[i][j] = Elem(ans,i,j);
-      }
-	m10[2][2] = 1;
-      
-    mult33(m1d,m10,m0d);
-    im=ImageRead4jpg("1.jpg");
-    ImageImageProjectionAlpha(im2,im,m1d,.5);
-  }
-
-  ImageWrite("out7_5.ppm",im2);
-
-  return 0;
 }
