@@ -80,3 +80,12 @@ void MatrixSimeqLr(Matrix*mtB,Matrix*mtR){
 */
 
 }
+
+
+  void MatrixFree(Matrix*mt)
+  {
+      free(mt->data);
+      free(mt);
+  }
+
+  
